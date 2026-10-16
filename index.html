@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Invoice Check</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --ink: #1d2433; --muted: #5d6677; --line: #e2e5eb;
+    --accent: #2f5bd3; --ok: #1f8a4c; --okbg: #e7f5ec; --warn: #a86a00; --warnbg: #fff4dc;
+    --bad: #b42318; --badbg: #fdecea; --dup: #6b4fbb; --dupbg: #efeafb;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 16px; }
+  .banner { border-radius: 10px; padding: 8px 12px; font-size: 14px; border: 1px solid; }
+  .banner.sample { background: var(--warnbg); border-color: #f1d9a6; color: #6b4a00; }
+  .banner.files { background: var(--okbg); border-color: #c6e6d2; color: #14532d; }
+  h1 { font-size: 24px; margin: 16px 0 4px; }
+  h2 { font-size: 17px; margin: 0 0 10px; }
+  .sub { color: var(--muted); margin: 0 0 16px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+  .controls { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end; }
+  .controls label, .files label { display: flex; flex-direction: column; font-size: 13px; color: var(--muted); gap: 4px; }
+  input[type=number], input[type=text] { width: 110px; padding: 7px 8px; border: 1px solid var(--line); border-radius: 8px; font: inherit; }
+  input[type=file] { font-size: 13px; max-width: 100%; }
+  input[type=range] { width: 200px; }
+  button { background: var(--accent); color: #fff; border: 0; border-radius: 8px; padding: 9px 14px; font: inherit; font-weight: 600; cursor: pointer; }
+  button.ghost { background: #fff; color: var(--accent); border: 1px solid var(--accent); }
+  button:disabled { opacity: .5; cursor: default; }
+  .files { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 12px 0; }
+  .files label { border: 1px dashed var(--line); border-radius: 10px; padding: 10px; }
+  .files strong { color: var(--ink); font-size: 14px; }
+  .linkbtn { background: none; color: var(--accent); padding: 0; font-weight: 500; text-decoration: underline; }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+  .kpi { border-radius: 10px; padding: 12px; border: 1px solid var(--line); background: #fff; }
+  .kpi .n { font-size: 28px; font-weight: 700; line-height: 1.1; }
+  .kpi .l { font-size: 13px; color: var(--muted); }
+  .kpi.ok { background: var(--okbg); border-color: #c6e6d2; } .kpi.ok .n { color: var(--ok); }
+  .kpi.warn { background: var(--warnbg); border-color: #f1d9a6; } .kpi.warn .n { color: var(--warn); }
+  .kpi.bad { background: var(--badbg); border-color: #f5c7c2; } .kpi.bad .n { color: var(--bad); }
+  .kpi.dup { background: var(--dupbg); border-color: #dcd2f5; } .kpi.dup .n { color: var(--dup); }
+  .bars .row { display: grid; grid-template-columns: 210px 1fr 40px; gap: 10px; align-items: center; margin: 6px 0; font-size: 14px; }
+  .bars .track { background: #eef0f4; border-radius: 6px; height: 14px; overflow: hidden; }
+  .bars .fill { background: var(--bad); height: 100%; border-radius: 6px; }
+  .bars .fill.d { background: var(--dup); }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 13px; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tr.click { cursor: pointer; } tr.click:hover { background: #f3f6fd; } tr.sel { background: #e8eefc; }
+  .pill { display: inline-block; border-radius: 999px; padding: 1px 8px; font-size: 12px; font-weight: 600; margin: 1px 2px 1px 0; }
+  .pill.ok { background: var(--okbg); color: var(--ok); } .pill.warn { background: var(--warnbg); color: var(--warn); }
+  .pill.bad { background: var(--badbg); color: var(--bad); } .pill.dup { background: var(--dupbg); color: var(--dup); }
+  .tabs { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+  .tabs button { background: #fff; color: var(--ink); border: 1px solid var(--line); font-weight: 500; padding: 6px 12px; }
+  .tabs button.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .note { background: #f3f6fd; border-left: 3px solid var(--accent); padding: 6px 10px; margin: 6px 0; font-size: 14px; }
+  .action { background: var(--badbg); border-left: 3px solid var(--bad); padding: 6px 10px; margin: 6px 0; font-size: 14px; }
+  .problem { font-size: 14px; padding: 4px 0; border-bottom: 1px solid var(--line); }
+  .problem.error { color: var(--bad); font-weight: 600; }
+  .flag { color: var(--bad); font-weight: 700; }
+  .muted { color: var(--muted); }
+  ol.rules li { margin: 4px 0; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .scroll { overflow-x: auto; }
+  .calc input { width: 70px; }
+  #results[hidden] { display: none; }
+  @media (max-width: 760px) {
+    .grid2, .files { grid-template-columns: 1fr; }
+    .bars .row { grid-template-columns: 130px 1fr 32px; }
+    input[type=range] { width: 150px; }
+  }
+  @media print {
+    body { background: #fff; font-size: 12px; }
+    .noprint, .tabs, #detailCard { display: none !important; }
+    .card { break-inside: avoid; border-color: #ccc; }
+    #tab-all, #tab-rules, #tab-key, #tab-data { display: none !important; }
+    #tab-ex { display: block !important; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="banner sample" id="banner"><strong>Sample data.</strong> Every vendor, item, number and amount shown is invented. None of it comes from a real company.</div>
+
+  <h1>Invoice Check</h1>
+  <p class="sub">Checks every supplier invoice against its purchase order and what was actually received. Approves the clean ones, and explains each problem in plain words: duplicates, prices above the order, billing for goods that never arrived, items nobody ordered, totals that do not add up.</p>
+
+  <div class="card noprint">
+    <h2>1. Choose the data</h2>
+    <p style="margin-top:0">
+      <button id="useSample">Try it with sample data</button>
+      <span class="muted">or load three CSV exports from your accounting or ERP system:</span>
+    </p>
+    <div class="files">
+      <label><strong>Purchase orders</strong>One row per order line<input type="file" id="fPos" accept=".csv,.txt"></label>
+      <label><strong>Goods receipts</strong>One row per item received<input type="file" id="fRec" accept=".csv,.txt"></label>
+      <label><strong>Supplier invoices</strong>One row per invoice line<input type="file" id="fInv" accept=".csv,.txt"></label>
+    </div>
+    <p style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:0">
+      <button id="useFiles" class="ghost" disabled>Check my files</button>
+      <span class="muted" style="font-size:13px">Download empty templates:
+        <button class="linkbtn" data-tpl="pos">purchase orders</button>,
+        <button class="linkbtn" data-tpl="receipts">receipts</button>,
+        <button class="linkbtn" data-tpl="invoices">invoices</button>.
+        Your own column names usually work too (for example "PO Number", "Supplier", "Qty").</span>
+    </p>
+    <p class="muted" style="font-size:13px;margin-bottom:0"><strong>Your files never leave this computer.</strong> The page reads them in the browser. There is no server, no upload and no account.</p>
+    <div id="problems" style="margin-top:12px" hidden></div>
+  </div>
+
+  <div id="results" hidden>
+    <div class="card noprint">
+      <h2>2. Set the rules</h2>
+      <div class="controls">
+        <label>Price tolerance: <strong id="tolv">2%</strong> <input id="tol" type="range" min="0" max="10" step="0.5" value="2"></label>
+        <label>Currency label <input id="cur" type="text" value="EUR" maxlength="5"></label>
+        <label>Tax rate when an invoice has no tax column (%) <input id="tax" type="number" min="0" max="50" step="0.5" value="0"></label>
+        <button class="ghost" id="print">Print or save the exception report</button>
+      </div>
+      <p class="muted" style="font-size:13px;margin-bottom:0">The tolerance is the trade-off your team sets: a higher one means fewer manual checks, but more money let through without review.</p>
+    </div>
+
+    <div class="card">
+      <h2 id="resultTitle">Result</h2>
+      <div class="kpis" id="kpis"></div>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <h2>Why invoices were stopped</h2>
+        <div class="bars" id="bars"></div>
+      </div>
+      <div class="card calc">
+        <h2>Time it saves (your estimate)</h2>
+        <p class="muted" style="margin-top:0">Type your own figure. The page does not assume one.</p>
+        <p>If checking one invoice by hand takes <input id="mins" type="number" min="0" step="0.5" value="5"> minutes,</p>
+        <p id="saved"></p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="tabs" id="tabs">
+        <button data-tab="ex" class="on">Exceptions</button>
+        <button data-tab="all">All invoices</button>
+        <button data-tab="rules">The rules</button>
+        <button data-tab="key" id="keyTab">Answer key check</button>
+        <button data-tab="data">Download results</button>
+      </div>
+      <div id="tab-ex"></div>
+      <div id="tab-all" hidden></div>
+      <div id="tab-rules" hidden>
+        <ol class="rules">
+          <li><strong>Recognise the vendor.</strong> Names are cleaned (case, punctuation, "Ltd", "Inc", "GmbH" style endings) and compared by similarity, so "ACME TOOLS LTD." is read as Acme Tools. Below 75% similar, the vendor is treated as unknown.</li>
+          <li><strong>Never pay twice.</strong> The same vendor with the same invoice digits ("INV-5012", "inv 5012", "Invoice #5012"), or the same vendor, total and order, is blocked as a duplicate.</li>
+          <li><strong>The invoice must add up.</strong> Lines times prices must equal the subtotal, and subtotal plus tax must equal the total (within 0.01 for rounding).</li>
+          <li><strong>Find the purchase order.</strong> First by the order number on the invoice ("PO 1001", "po-1001" and "1001" are read as one). If it is missing or wrong, by the same vendor, an order placed up to 45 days before the invoice, and an order total within 0.5%. If two orders could fit, a person decides.</li>
+          <li><strong>Compare every line.</strong> Each item must be on the order. Quantity billed must not exceed quantity received, adding up all deliveries. Price must not exceed the order price by more than the tolerance.</li>
+          <li><strong>Decide.</strong> Clean invoices are approved. Small price differences inside the tolerance are approved and noted. Everything else goes to a person with the reason and a suggested next step. Nothing is paid or changed by this page.</li>
+        </ol>
+      </div>
+      <div id="tab-key" hidden></div>
+      <div id="tab-data" hidden>
+        <p>Download the decisions as a CSV file to open in a spreadsheet or send to the person who approves payments.</p>
+        <p style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="ghost" data-dl="results">All decisions</button>
+          <button class="ghost" data-dl="exceptions">Exceptions only</button>
+          <button class="ghost" data-dl="lines">Line-by-line checks</button>
+        </p>
+      </div>
+    </div>
+
+    <div class="card noprint" id="detailCard" hidden>
+      <h2 id="detailTitle"></h2>
+      <div id="detail"></div>
+    </div>
+  </div>
+
+  <p class="muted" style="font-size:13px">Invoice Check runs fully in this browser. It decides nothing on its own: every stopped invoice goes to a person.</p>
+</div>
+
+<script src="engine.js"></script>
+<script src="importer.js"></script>
+<script>
+(function () {
+  const E = window.InvoiceEngine, I = window.InvoiceImporter;
+  const $ = (id) => document.getElementById(id);
+  const money = (n) => (n == null ? '-' : n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const STATUS = {
+    approved: ['Approved', 'ok'], tolerance: ['Approved within tolerance', 'warn'],
+    exception: ['Needs a person', 'bad'], duplicate: ['Blocked: duplicate', 'dup'],
+  };
+  let data = null, matched = null, selected = null, isSample = true;
+
+  function run() {
+    const tol = parseFloat($('tol').value);
+    $('tolv').textContent = tol + '%';
+    matched = E.match(data, { priceTolerancePct: tol, taxRate: isSample ? E.TAX_RATE : (parseFloat($('tax').value) || 0) / 100 });
+    render();
+  }
+
+  function show(newData, sample) {
+    data = newData; isSample = sample; selected = null;
+    $('results').hidden = false;
+    $('banner').className = 'banner ' + (sample ? 'sample' : 'files');
+    $('banner').innerHTML = sample
+      ? '<strong>Sample data.</strong> Every vendor, item, number and amount shown is invented. None of it comes from a real company.'
+      : '<strong>Your files.</strong> Read in this browser only. Nothing was uploaded.';
+    $('keyTab').hidden = !sample;
+    if (!sample && document.querySelector('#tabs .on').dataset.tab === 'key') document.querySelector('#tabs [data-tab=ex]').click();
+    $('detailCard').hidden = true;
+    run();
+  }
+
+  function pill(status) { const s = STATUS[status]; return '<span class="pill ' + s[1] + '">' + s[0] + '</span>'; }
+  function reasonPills(r) { return r.reasons.map((k) => '<span class="pill ' + (k === 'DUPLICATE' ? 'dup' : 'bad') + '">' + E.REASONS[k].label + '</span>').join(''); }
+
+  function render() {
+    const s = matched.summary, cur = esc($('cur').value || '');
+    $('resultTitle').textContent = (isSample ? 'Result for the sample batch' : 'Result for your files') + ' · ' + new Date().toISOString().slice(0, 10);
+    $('kpis').innerHTML = [
+      ['', s.invoices, 'Invoices checked'],
+      ['ok', s.approved, 'Approved, no person needed'],
+      ['warn', s.tolerance, 'Approved within tolerance'],
+      ['bad', s.exception, 'Need a person'],
+      ['dup', s.duplicate, 'Duplicates blocked'],
+      ['', Math.round(s.noTouchRate * 100) + '%', 'Handled with no person'],
+      ['bad', money(s.valueOnHold), 'Value on hold (' + cur + ')'],
+    ].map((k) => '<div class="kpi ' + k[0] + '"><div class="n">' + k[1] + '</div><div class="l">' + k[2] + '</div></div>').join('');
+
+    const order = ['DUPLICATE', 'PRICE', 'QTY', 'NO_PO', 'ITEM', 'MATH', 'AMBIGUOUS'];
+    const max = Math.max(1, ...order.map((k) => s.byReason[k] || 0));
+    $('bars').innerHTML = order.filter((k) => s.byReason[k]).map((k) =>
+      '<div class="row"><span>' + E.REASONS[k].label + '</span><div class="track"><div class="fill ' + (k === 'DUPLICATE' ? 'd' : '') + '" style="width:' + (100 * s.byReason[k] / max) + '%"></div></div><strong>' + s.byReason[k] + '</strong></div>'
+    ).join('') || '<p class="muted">Nothing stopped.</p>';
+
+    const mins = parseFloat($('mins').value) || 0;
+    const auto = s.approved + s.tolerance;
+    $('saved').innerHTML = 'then <strong>' + auto + '</strong> invoices needed nobody, about <strong>' + (Math.round(auto * mins / 6) / 10) + ' hours</strong>. The <strong>' + (s.exception + s.duplicate) + '</strong> stopped invoices arrive with the reason already written.';
+
+    const rows = (list) => '<div class="scroll"><table><thead><tr><th>Invoice</th><th>Vendor as written</th><th>Order</th><th>Result</th><th>Why</th><th class="num">Total</th></tr></thead><tbody>' +
+      list.map((r) => '<tr class="click' + (selected === r._i ? ' sel' : '') + '" data-i="' + r._i + '"><td>' + esc(r.invoiceNumber) + '<div class="muted" style="font-size:12px">' + esc(r.date) + '</div></td><td>' + esc(r.vendorWritten) + '</td><td>' + (r.poNumber ? esc(r.poNumber) : '<span class="muted">none</span>') + '</td><td>' + pill(r.status) + '</td><td>' + (reasonPills(r) || '<span class="muted">' + (r.notes.length ? 'see notes' : '') + '</span>') + '</td><td class="num">' + money(r.total) + '</td></tr>').join('') +
+      '</tbody></table></div>';
+    matched.results.forEach((r, i) => { r._i = i; });
+    const ex = matched.results.filter((r) => r.status === 'exception' || r.status === 'duplicate');
+    $('tab-ex').innerHTML = '<p class="muted" style="margin-top:0">' + ex.length + ' invoices stopped, ' + cur + ' ' + money(s.valueOnHold) + ' on hold. Click a row to see the invoice next to its order and delivery.</p>' + rows(ex);
+    $('tab-all').innerHTML = rows(matched.results);
+
+    $('tab-key').innerHTML = '';
+    if (isSample) {
+      const k = E.checkAgainstKey(data, matched);
+      $('tab-key').innerHTML = '<p>The sample generator knows what it planted in each invoice. This tab compares the decisions with that answer key, so the rules are checked, not just claimed.</p>' +
+        '<div class="kpis"><div class="kpi ' + (k.misses.length ? 'bad' : 'ok') + '"><div class="n">' + k.agree + ' / ' + k.total + '</div><div class="l">Decisions that match the answer key</div></div></div>';
+    }
+
+    document.querySelectorAll('tr.click').forEach((tr) => tr.addEventListener('click', () => showDetail(+tr.dataset.i)));
+    if (selected != null) showDetail(selected, true);
+  }
+
+  function showDetail(i, noScroll) {
+    selected = i;
+    document.querySelectorAll('tr.click').forEach((tr) => tr.classList.toggle('sel', +tr.dataset.i === i));
+    const inv = data.invoices[i], r = matched.results[i];
+    $('detailCard').hidden = false;
+    $('detailTitle').innerHTML = esc(inv.invoiceNumber) + ' ' + pill(r.status);
+    let h = '<p class="muted" style="margin-top:0">Vendor as written: <strong>' + esc(inv.vendorName) + '</strong> · Order number on invoice: <strong>' + esc(inv.poRef || 'none') + '</strong> · Date: ' + esc(inv.date) + '</p>';
+    r.notes.forEach((n) => { h += '<div class="note">' + esc(n) + '</div>'; });
+    r.reasons.forEach((k) => { h += '<div class="action"><strong>' + E.REASONS[k].label + '.</strong> ' + E.REASONS[k].action + (k === 'DUPLICATE' ? ' First received as ' + esc(r.duplicateOf) + '.' : '') + '</div>'; });
+    if (r.lineChecks.length) {
+      h += '<div class="scroll"><table><thead><tr><th>Item</th><th class="num">Ordered</th><th class="num">Received</th><th class="num">Billed</th><th class="num">Order price</th><th class="num">Billed price</th><th>Check</th></tr></thead><tbody>' +
+        r.lineChecks.map((c) => {
+          const qf = c.flags.indexOf('QTY') >= 0, pf = c.flags.indexOf('PRICE') >= 0, itf = c.flags.indexOf('ITEM') >= 0;
+          const msg = itf ? '<span class="flag">Not on order</span>' : (qf || pf) ? '<span class="flag">' + [qf ? 'More than received' : '', pf ? 'Price +' + c.priceDiffPct + '%' : ''].filter(Boolean).join(', ') + '</span>' : c.flags.indexOf('PRICE_OK') >= 0 ? 'Price +' + c.priceDiffPct + '%, inside tolerance' : 'OK';
+          return '<tr><td>' + esc(c.desc) + '</td><td class="num">' + (c.qtyOrdered || '-') + '</td><td class="num">' + c.qtyReceived + '</td><td class="num' + (qf ? ' flag' : '') + '">' + c.qtyBilled + '</td><td class="num">' + money(c.priceOrdered) + '</td><td class="num' + (pf ? ' flag' : '') + '">' + money(c.priceBilled) + '</td><td>' + msg + '</td></tr>';
+        }).join('') + '</tbody></table></div>';
+    } else if (r.status !== 'duplicate') {
+      h += '<p class="muted">No order to compare with.</p>';
+    }
+    h += '<p class="muted">Subtotal ' + money(inv.subtotal) + ' · Tax ' + money(inv.tax) + ' · Total ' + money(inv.total) + '</p>';
+    $('detail').innerHTML = h;
+    if (!noScroll) $('detailCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function saveCsv(name, text) {
+    const blob = new Blob([text], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+
+  function download(kind) {
+    const note = isSample ? '# INVENTED SAMPLE DATA\n' : '';
+    const label = (r) => ({ invoice: r.invoiceNumber, vendor: r.vendorName || r.vendorWritten, vendor_as_written: r.vendorWritten, date: r.date, po: r.poNumber || '', result: STATUS[r.status][0], reasons: r.reasons.map((k) => E.REASONS[k].label).join('; '), next_step: r.reasons.map((k) => E.REASONS[k].action).join(' '), notes: r.notes.join(' '), total: r.total });
+    let rows;
+    if (kind === 'results') rows = matched.results.map(label);
+    if (kind === 'exceptions') rows = matched.results.filter((r) => r.status === 'exception' || r.status === 'duplicate').map(label);
+    if (kind === 'lines') rows = matched.results.flatMap((r) => r.lineChecks.map((c) => ({ invoice: r.invoiceNumber, po: r.poNumber, item: c.desc, qty_ordered: c.qtyOrdered, qty_received: c.qtyReceived, qty_billed: c.qtyBilled, order_price: c.priceOrdered, billed_price: c.priceBilled, price_diff_pct: c.priceDiffPct == null ? '' : c.priceDiffPct, flags: c.flags.join(' ') })));
+    saveCsv('invoice-check-' + kind + '.csv', note + E.toCsv(rows));
+  }
+
+  // ---------- Loading files ----------
+  const inputs = { pos: $('fPos'), receipts: $('fRec'), invoices: $('fInv') };
+  const ready = () => { $('useFiles').disabled = !Object.values(inputs).every((x) => x.files && x.files.length); };
+  Object.values(inputs).forEach((x) => x.addEventListener('change', ready));
+  const readText = (file) => new Promise((ok, fail) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = fail; r.readAsText(file); });
+
+  $('useFiles').addEventListener('click', async () => {
+    const texts = {};
+    for (const k of Object.keys(inputs)) texts[k] = await readText(inputs[k].files[0]);
+    const imp = I.importFiles(texts);
+    const box = $('problems');
+    box.hidden = !imp.problems.length;
+    box.innerHTML = imp.problems.length ? '<h2>' + (imp.data ? 'Checked, with ' + imp.problems.length + ' notes about the files' : 'The files could not be checked') + '</h2>' +
+      imp.problems.slice(0, 200).map((p) => '<div class="problem ' + p.level + '">' + esc(p.file) + (p.row ? ', row ' + p.row : '') + ': ' + esc(p.msg) + '</div>').join('') +
+      (imp.problems.length > 200 ? '<p class="muted">' + (imp.problems.length - 200) + ' more not shown.</p>' : '') : '';
+    if (imp.data) show(imp.data, false); else $('results').hidden = true;
+  });
+
+  $('useSample').addEventListener('click', () => { $('problems').hidden = true; show(E.generate({ seed: 42, count: 120 }), true); });
+  document.querySelectorAll('[data-tpl]').forEach((b) => b.addEventListener('click', () => saveCsv('template-' + b.dataset.tpl + '.csv', I.TEMPLATES[b.dataset.tpl] + '\n')));
+  $('tol').addEventListener('input', run);
+  $('tax').addEventListener('input', () => { if (!isSample) run(); });
+  $('cur').addEventListener('input', render);
+  $('mins').addEventListener('input', render);
+  $('print').addEventListener('click', () => window.print());
+  document.querySelectorAll('#tabs button').forEach((b) => b.addEventListener('click', () => {
+    document.querySelectorAll('#tabs button').forEach((x) => x.classList.toggle('on', x === b));
+    ['ex', 'all', 'rules', 'key', 'data'].forEach((t) => { $('tab-' + t).hidden = t !== b.dataset.tab; });
+  }));
+  document.querySelectorAll('[data-dl]').forEach((b) => b.addEventListener('click', () => download(b.dataset.dl)));
+
+  show(E.generate({ seed: 42, count: 120 }), true);
+})();
+</script>
+</body>
+</html>
