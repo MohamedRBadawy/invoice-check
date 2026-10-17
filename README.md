@@ -66,6 +66,17 @@ Results (Node 22, Chromium via Playwright):
 - In the browser: the sample, the same data loaded as files, the detail view, the exceptions CSV, the broken-file message and the phone layout (no sideways scrolling at 390 px) all passed with no script errors.
 - The matching rules come from the earlier demo, which agreed with its answer key on 210,000 decisions. That proves the rules do what they say on invented data. It does not predict accuracy on a real company's data: on real data, start by comparing its decisions with invoices a person has already approved or rejected.
 
+## Build your own
+
+The code is plain JavaScript with no build step and no dependencies. Change a file, reload `index.html`, and run the tests.
+
+- **Your column names.** Add them to the lists in `COLUMNS` at the top of `importer.js`. Matching ignores case, spaces and punctuation, so add `"supplierref"`, not `"Supplier Ref"`.
+- **Your wording.** Every problem's label and suggested next step is in `REASONS` in `engine.js`. Rewrite them in your team's words or your own language.
+- **Your rules.** The checks run in order inside `match()` in `engine.js`: duplicates, totals, finding the order, then each line against the order and the receipt. Add a check there, give it a key in `REASONS`, and the page shows it with no other change.
+- **Your tax and tolerance defaults.** `TAX_RATE` in `engine.js`, and the inputs near the top of `index.html`.
+
+After any change, run `node tests/test-import.js`. If you change a rule on purpose, update the answer key in `expectedFor()` in `engine.js` to match, so the tests keep checking what you meant.
+
 ## Files
 
 | Path | What it is |
@@ -77,6 +88,7 @@ Results (Node 22, Chromium via Playwright):
 | `sample/` | Invented example files (seed 42, 120 invoices) |
 | `tests/` | Automated checks |
 | `screenshots/` | Pictures from the browser test |
+| `LICENSE` | MIT licence |
 
 ## Why I built it
 
@@ -85,3 +97,7 @@ Checking invoices against orders and deliveries is one of the most common manual
 Everything here is built from scratch on invented data. It contains no code, data, rules, names or figures from any employer or client.
 
 Built by [Mohammed Badawy](https://mohammedbadawy.com).
+
+## Licence
+
+MIT. You may use, change and share it, including at work, as long as the licence notice stays with it. See `LICENSE`.
